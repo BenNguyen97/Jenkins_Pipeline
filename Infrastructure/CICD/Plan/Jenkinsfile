@@ -2,6 +2,7 @@ pipeline {
     agent any
     environment {
         AWS_CREDENTIALS_ID = 'AWS_CREDENTIALS' // AWS Credentials trong Jenkins
+        TERRAFORM_BIN = '/usr/bin/terraform'  // Đặt đúng đường dẫn Terraform
     }
     stages {
         stage('Checkout Code') {
@@ -16,8 +17,8 @@ pipeline {
                 withCredentials([
                     [$class: 'AmazonWebServicesCredentialsBinding', credentialsId: AWS_CREDENTIALS_ID]
                 ]) {
-                    withEnv(["PATH=$TERRAFORM_BIN:$PATH"]) {
-                        sh 'terraform init'
+                    withEnv(["TERRAFORM_BIN=/usr/bin/terraform"]) {
+                        sh '$TERRAFORM_BIN init'
                     }
                 }
             }
