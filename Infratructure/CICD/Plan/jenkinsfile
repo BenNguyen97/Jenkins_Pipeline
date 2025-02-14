@@ -1,0 +1,45 @@
+pipeline {
+    agent any
+    environment {
+        AWS_CREDENTIALS_ID = 'AWS_CREDENTIALS'   // Lấy credentials từ Jenkins
+    }
+    stages {
+        stage('Checkout Code') {
+            steps {
+                git 'https://github.com/your-repo/terraform-infra.git'
+            }
+        }
+        stage('Init Terraform') {
+            steps {
+                sh 'terraform init'
+            }
+        }
+        stage('Validate Terraform') {
+            steps {
+                sh 'terraform validate'
+            }
+        }
+        stage('Plan Terraform') {
+            steps {
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: AWS_CREDENTIALS_ID]]) {
+                    sh 'terraform plan -out=tfplan'
+                }
+            }
+        }
+        stage('Approve Deployment') {
+            when {
+                expression { return input(message: 'Approve Terraform Apply?', ok: 'Proceed') }
+            }
+            steps {
+                echo "Approved! Proceeding with deployment..."
+            }
+        }
+        stage('Apply Terraform') {
+            steps {
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: AWS_CREDENTIALS_ID]]) {
+                    sh 'terraform apply -auto-approve tfplan'
+                }
+            }
+        }
+    }
+}

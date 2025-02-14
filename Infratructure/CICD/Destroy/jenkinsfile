@@ -1,0 +1,40 @@
+pipeline {
+    agent any
+    environment {
+        AWS_CREDENTIALS_ID = 'AWS_CREDENTIALS'
+    }
+    stages {
+        stage('Checkout Code') {
+            steps {
+                git 'https://github.com/your-repo/terraform-infra.git'
+            }
+        }
+        stage('Init Terraform') {
+            steps {
+                sh 'terraform init'
+            }
+        }
+        stage('Plan Destroy') {
+            steps {
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: AWS_CREDENTIALS_ID]]) {
+                    sh 'terraform plan -destroy -out=tfplan'
+                }
+            }
+        }
+        stage('Approve Destruction') {
+            when {
+                expression { return input(message: 'Approve Terraform Destroy?', ok: 'Proceed') }
+            }
+            steps {
+                echo "Approved! Proceeding with destruction..."
+            }
+        }
+        stage('Destroy Terraform') {
+            steps {
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: AWS_CREDENTIALS_ID]]) {
+                    sh 'terraform destroy -auto-approve'
+                }
+            }
+        }
+    }
+}
