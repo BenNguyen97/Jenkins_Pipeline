@@ -16,7 +16,7 @@ pipeline {
                 withCredentials([
                     [$class: 'AmazonWebServicesCredentialsBinding', credentialsId: AWS_CREDENTIALS_ID]
                 ]) {
-                    withEnv(["PATH+TF=/usr/local/bin"]) {
+                    withEnv(["PATH=$TERRAFORM_BIN:$PATH"]) {
                         sh 'terraform init'
                     }
                 }
