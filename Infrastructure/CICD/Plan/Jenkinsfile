@@ -1,8 +1,7 @@
 pipeline {
     agent any
     environment {
-        AWS_ACCESS_KEY_ID = credentials('AWS_ACCESS_KEY_ID')
-        AWS_SECRET_ACCESS_KEY = credentials('AWS_SECRET_ACCESS_KEY')
+        AWS_CREDENTIALS_ID = 'AWS_CREDENTIALS' // Định danh credentials trong Jenkins
     }
     stages {
         stage('Checkout Code') {
@@ -12,39 +11,21 @@ pipeline {
         }
         stage('Init Terraform') {
             steps {
-                sh 'terraform init'
-            }
-        }
-        stage('Validate Terraform') {
-            steps {
-                sh 'terraform validate'
+                withCredentials([[
+                    $class: 'AmazonWebServicesCredentialsBinding', 
+                    credentialsId: AWS_CREDENTIALS_ID
+                ]]) {
+                    sh 'terraform init'
+                }
             }
         }
         stage('Plan Terraform') {
             steps {
-                withCredentials([
-                    string(credentialsId: 'AWS_ACCESS_KEY_ID', variable: 'AWS_ACCESS_KEY_ID'),
-                    string(credentialsId: 'AWS_SECRET_ACCESS_KEY', variable: 'AWS_SECRET_ACCESS_KEY')
-                ]) {
-                    sh 'terraform plan -var="access_key=$AWS_ACCESS_KEY_ID" -var="secret_key=$AWS_SECRET_ACCESS_KEY" -out=tfplan'
-                }
-            }
-        }
-        stage('Approve Deployment') {
-            when {
-                expression { return input(message: 'Approve Terraform Apply?', ok: 'Proceed') }
-            }
-            steps {
-                echo "Approved! Proceeding with deployment..."
-            }
-        }
-        stage('Apply Terraform') {
-            steps {
-                withCredentials([
-                    string(credentialsId: 'AWS_ACCESS_KEY_ID', variable: 'AWS_ACCESS_KEY_ID'),
-                    string(credentialsId: 'AWS_SECRET_ACCESS_KEY', variable: 'AWS_SECRET_ACCESS_KEY')
-                ]) {
-                    sh 'terraform apply -auto-approve tfplan'
+                withCredentials([[
+                    $class: 'AmazonWebServicesCredentialsBinding', 
+                    credentialsId: AWS_CREDENTIALS_ID
+                ]]) {
+                    sh 'terraform plan -out=tfplan'
                 }
             }
         }
