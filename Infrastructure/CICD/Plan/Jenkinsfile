@@ -16,8 +16,9 @@ pipeline {
                 withCredentials([
                     [$class: 'AmazonWebServicesCredentialsBinding', credentialsId: AWS_CREDENTIALS_ID]
                 ]) {
-                withEnv(["PATH+TF=/usr/local/bin"])
-                    sh 'terraform init'
+                    withEnv(["PATH+TF=/usr/local/bin"]) {
+                        sh 'terraform init'
+                    }
                 }
             }
         }
@@ -27,6 +28,15 @@ pipeline {
                     [$class: 'AmazonWebServicesCredentialsBinding', credentialsId: AWS_CREDENTIALS_ID]
                 ]) {
                     sh 'terraform plan -out=tfplan'
+                }
+            }
+        }
+        stage('Apply Terraform') {
+            steps {
+                withCredentials([
+                    [$class: 'AmazonWebServicesCredentialsBinding', credentialsId: AWS_CREDENTIALS_ID]
+                ]) {
+                    sh 'terraform apply -auto-approve tfplan'
                 }
             }
         }
