@@ -1,33 +1,30 @@
 pipeline {
     agent any
     environment {
-        AWS_CREDENTIALS_ID = 'AWS_CREDENTIALS' // Định danh credentials trong Jenkins
+        AWS_CREDENTIALS_ID = 'AWS_CREDENTIALS' // AWS Credentials trong Jenkins
     }
     stages {
         stage('Checkout Code') {
             steps {
-                steps {
                 git branch: 'main',
-                    credentialsId: 'github-token',
+                    credentialsId: 'github-token', // Sử dụng token
                     url: 'https://github.com/BenNguyen97/Jenkins_Pipeline.git'
             }
         }
         stage('Init Terraform') {
             steps {
-                withCredentials([[
-                    $class: 'AmazonWebServicesCredentialsBinding', 
-                    credentialsId: AWS_CREDENTIALS_ID
-                ]]) {
+                withCredentials([
+                    [$class: 'AmazonWebServicesCredentialsBinding', credentialsId: AWS_CREDENTIALS_ID]
+                ]) {
                     sh 'terraform init'
                 }
             }
         }
         stage('Plan Terraform') {
             steps {
-                withCredentials([[
-                    $class: 'AmazonWebServicesCredentialsBinding', 
-                    credentialsId: AWS_CREDENTIALS_ID
-                ]]) {
+                withCredentials([
+                    [$class: 'AmazonWebServicesCredentialsBinding', credentialsId: AWS_CREDENTIALS_ID]
+                ]) {
                     sh 'terraform plan -out=tfplan'
                 }
             }
