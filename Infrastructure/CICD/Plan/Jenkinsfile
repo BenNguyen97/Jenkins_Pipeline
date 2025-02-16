@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        TERRAFORM_BIN = '/usr/bin/terraform'  // Đặt đúng đường dẫn Terraform
+        TERRAFORM_BIN = "$HOME/bin/terraform"  // Đường dẫn chính xác
         AWS_CREDENTIALS_ID = 'AWS_CREDENTIALS' // AWS Credentials trong Jenkins
     }
 
@@ -19,22 +19,25 @@ pipeline {
 
         stage('Init Terraform') {
             steps {
-                withCredentials([
-                    [$class: 'AmazonWebServicesCredentialsBinding', credentialsId: AWS_CREDENTIALS_ID]
-                ]) {
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: AWS_CREDENTIALS_ID]]) {
                     script {
-                        script {
-                            sh '''
+                        sh '''
+                        echo "Checking Terraform..."
+                        if ! command -v terraform &> /dev/null; then
+                            echo "Terraform not found. Installing..."
                             curl -fsSL https://releases.hashicorp.com/terraform/1.5.7/terraform_1.5.7_linux_amd64.zip -o terraform.zip
-                            rm -f terraform  # Xóa file cũ nếu tồn tại
+                            rm -f terraform
                             unzip -o terraform.zip
                             chmod +x terraform
-                            mv terraform /usr/local/bin/
                             mkdir -p $HOME/bin
                             mv terraform $HOME/bin/
                             export PATH=$HOME/bin:$PATH
-                            '''
-                        }
+                        else
+                            echo "Terraform already installed"
+                        fi
+                        echo "Terraform version:"
+                        $HOME/bin/terraform version
+                        '''
                     }
                 }
             }
@@ -42,11 +45,9 @@ pipeline {
 
         stage('Plan Terraform') {
             steps {
-                withCredentials([
-                    [$class: 'AmazonWebServicesCredentialsBinding', credentialsId: AWS_CREDENTIALS_ID]
-                ]) {
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: AWS_CREDENTIALS_ID]]) {
                     script {
-                        sh '${TERRAFORM_BIN} plan -out=tfplan'
+                        sh '$HOME/bin/terraform plan -out=tfplan'
                     }
                 }
             }
@@ -54,11 +55,9 @@ pipeline {
 
         stage('Apply Terraform') {
             steps {
-                withCredentials([
-                    [$class: 'AmazonWebServicesCredentialsBinding', credentialsId: AWS_CREDENTIALS_ID]
-                ]) {
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: AWS_CREDENTIALS_ID]]) {
                     script {
-                        sh '${TERRAFORM_BIN} apply -auto-approve tfplan'
+                        sh '$HOME/bin/terraform apply -auto-approve tfplan'
                     }
                 }
             }
