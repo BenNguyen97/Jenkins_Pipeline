@@ -30,6 +30,9 @@ pipeline {
                             unzip -o terraform.zip
                             chmod +x terraform
                             mv terraform /usr/local/bin/
+                            mkdir -p $HOME/bin
+                            mv terraform $HOME/bin/
+                            export PATH=$HOME/bin:$PATH
                             '''
                         }
                     }
