@@ -1,45 +1,73 @@
 pipeline {
     agent any
+
     environment {
-        AWS_ACCESS_KEY_ID = credentials('AWS_ACCESS_KEY_ID')
-        AWS_SECRET_ACCESS_KEY = credentials('AWS_SECRET_ACCESS_KEY')
+        TERRAFORM_BIN = "$HOME/bin/terraform"
+        AWS_CREDENTIALS_ID = 'AWS_CREDENTIALS'
     }
+
     stages {
         stage('Checkout Code') {
             steps {
-                git 'https://github.com/BenNguyen97/Jenkins_Pipeline.git'
+                git branch: 'main',
+                    credentialsId: 'github-token',
+                    url: 'https://github.com/BenNguyen97/Jenkins_Pipeline.git'
             }
         }
-        stage('Init Terraform') {
+
+        stage('Setup Terraform') {
             steps {
-                sh 'terraform init'
+                script {
+                    sh '''
+                    if ! command -v $HOME/bin/terraform &> /dev/null; then
+                        echo "Installing Terraform..."
+                        curl -fsSL https://releases.hashicorp.com/terraform/1.10.5/terraform_1.10.5_linux_amd64.zip -o terraform.zip
+                        unzip -o terraform.zip
+                        chmod +x terraform
+                        mkdir -p $HOME/bin
+                        mv terraform $HOME/bin/
+                        rm -f terraform.zip
+                    else
+                        echo "Terraform already installed"
+                    fi
+                    echo "Terraform version:"
+                    $HOME/bin/terraform version
+                    '''
+                }
             }
         }
-        stage('Plan Destroy') {
+
+        stage('Terraform Destroy Plan') {
             steps {
-                sh '''
-                terraform plan -destroy \
-                -var="access_key=${AWS_ACCESS_KEY_ID}" \
-                -var="secret_key=${AWS_SECRET_ACCESS_KEY}" \
-                -out=tfplan
-                '''
+                withCredentials([aws(credentialsId: AWS_CREDENTIALS_ID)]) {
+                    script {
+                        sh '''
+                        cd Infrastructure
+                        $HOME/bin/terraform init
+                        $HOME/bin/terraform plan -destroy -out=tfplan-destroy \
+                            -var="access_key=$AWS_ACCESS_KEY_ID" \
+                            -var="secret_key=$AWS_SECRET_ACCESS_KEY"
+                        '''
+                    }
+                }
             }
         }
-        stage('Approve Destruction') {
-            when {
-                expression { return input(message: 'Approve Terraform Destroy?', ok: 'Proceed') }
-            }
+
+        stage('Terraform Destroy Apply') {
             steps {
-                echo "Approved! Proceeding with destruction..."
-            }
-        }
-        stage('Destroy Terraform') {
-            steps {
-                sh '''
-                terraform destroy -auto-approve \
-                -var="access_key=${AWS_ACCESS_KEY_ID}" \
-                -var="secret_key=${AWS_SECRET_ACCESS_KEY}"
-                '''
+                withCredentials([aws(credentialsId: AWS_CREDENTIALS_ID)]) {
+                    script {
+                        sh '''
+                        cd Infrastructure
+                        if [ -f "tfplan-destroy" ]; then
+                            $HOME/bin/terraform apply -auto-approve tfplan-destroy
+                        else
+                            echo "❌ tfplan-destroy not found! Skipping destroy."
+                            exit 1
+                        fi
+                        '''
+                    }
+                }
             }
         }
     }
