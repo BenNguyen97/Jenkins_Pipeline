@@ -1,5 +1,5 @@
 provider "aws" {
-  region     = "ap-southeast-2" # < --- here 
+  region     = "ap-southeast-1" # 
   access_key = var.access_key
   secret_key = var.secret_key
 }
@@ -7,9 +7,9 @@ provider "aws" {
 module "vpc" {
   source = "terraform-aws-modules/vpc/aws"
 
-  name = "test-jenkins-pipeline"
+  name = "test-jenkins-pipeline-Luan"
   cidr = "10.0.0.0/16"
 
-  azs             = ["ap-southeast-2a", "ap-southeast-2b", "ap-southeast-2c"]
-  public_subnets  = ["10.0.1.0/24"]
+  azs             = ["ap-southeast-1a", "ap-southeast-1b", "ap-southeast-1c"]
+  public_subnets  = ["10.0.0.0/24"]
 }
