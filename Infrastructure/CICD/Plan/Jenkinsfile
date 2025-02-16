@@ -45,9 +45,7 @@ pipeline {
 
         stage('Plan Terraform') {
             steps {
-                withCredentials([
-                    aws(credentialsId: AWS_CREDENTIALS_ID)
-                ]) {
+                withCredentials([aws(credentialsId: AWS_CREDENTIALS_ID)]) {
                     script {
                         sh ''' 
                         export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
@@ -65,9 +63,12 @@ pipeline {
         }
         stage('Apply Terraform') {
             steps {
-                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: AWS_CREDENTIALS_ID]]) {
+                withCredentials([aws(credentialsId: AWS_CREDENTIALS_ID)]) {
                     script {
-                        sh '$HOME/bin/terraform apply -auto-approve tfplan'
+                        sh '''
+                        cd Infrastructure
+                        $HOME/bin/terraform apply -auto-approve tfplan
+                        '''
                     }
                 }
             }
